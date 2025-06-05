@@ -37,7 +37,7 @@ if uploaded_files and len(uploaded_files) == 2:
 
     # 保留关键列
     # df = df[['Date', 'Demand', 'Unit_Cost', 'IsHoliday', 'Temperature']]
-    # df['Date'] = pd.to_datetime(df['Date'])
+    df['Date'] = pd.to_datetime(df['Date'])
 
 
     # 参数设置
@@ -91,7 +91,7 @@ if uploaded_files and len(uploaded_files) == 2:
         q = policy[t][int(round(inventory / 10) * 10)]
         demand = df.loc[t, 'Demand']
         plan.append({
-            "Date": df.iloc[t]['Date'].strftime("%Y-%m-%d"),
+            "Date": df.loc[t, 'Date'].strftime("%Y-%m-%d"),
             "Inventory_Begin": inventory,
             "Order_Q": q,
             "Demand": round(demand, 1),
