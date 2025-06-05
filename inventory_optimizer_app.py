@@ -11,28 +11,37 @@ if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
     # 校验基础列是否存在
-    required_cols = {'Date', 'Fuel_Price', 'CPI', 'IsHoliday'}
+    required_cols = {'Date', 'Fuel_Price', 'CPI', 'IsHoliday', 'Temperature'}
     if not required_cols.issubset(df.columns):
         st.error(f"❌ Uploaded file is missing required columns: {required_cols - set(df.columns)}")
         st.stop()
 
-    # 模拟 Demand：基础随机 × CPI × 节假日放大
+    # 模拟 Demand：气温敏感商品（如冰饮料）
     np.random.seed(42)
     base_demand = np.random.uniform(80, 120, len(df))
     df['Demand'] = base_demand * (df['CPI'] / df['CPI'].mean())
-    df['Demand'] = df['Demand'].where(~df['IsHoliday'], df['Demand'] * 1.5)  # 节假日加倍
 
-    # 模拟 Unit_Cost：与 CPI 和油价相关联
-    df['Unit_Cost'] = 6.5 + 0.02 * (df['CPI'] - df['CPI'].mean()) + 0.2 * (df['Fuel_Price'] - df['Fuel_Price'].mean())
+    # 节假日 ×1.5 放大
+    df['Demand'] = df['Demand'].where(~df['IsHoliday'], df['Demand'] * 1.5)
+
+    # 气温影响：气温越高，需求越高（每升高1°C，需求上涨3%，基于20°C）
+    df['Demand'] *= 1 + 0.03 * (df['Temperature'] - 20)
+
+    # 模拟 Unit_Cost：固定成本 + 随机扰动 + 假期促销
+    np.random.seed(42)
+    df['Unit_Cost'] = np.random.normal(loc=6.5, scale=0.2, size=len(df))
+    df.loc[df['IsHoliday'], 'Unit_Cost'] *= 0.9  # 假期促销
+
 
     # 保留关键列
-    df = df[['Date', 'Demand', 'Unit_Cost', 'IsHoliday']]
+    df = df[['Date', 'Demand', 'Unit_Cost', 'IsHoliday', 'Temperature']]
     df['Date'] = pd.to_datetime(df['Date'])
 
+
     # 参数设置
+    hold_ratio = 0.2
+    shortage_multiplier = 4
     st.sidebar.header("Model Parameter Settings")
-    hold_ratio = st.sidebar.slider("Holding cost ratio (h = ratio × purchase cost)", 0.05, 0.5, 0.1)
-    shortage_multiplier = st.sidebar.slider("Shortage cost multiplier (p = multiplier × purchase cost)", 1.0, 5.0, 2.0)
     initial_inventory = st.sidebar.number_input("Initial Inventory Level I₀", min_value=0, max_value=1000, value=50)
     max_order = st.sidebar.number_input("Max order quantity per period Qₜ", min_value=10, max_value=1000, value=100)
 
@@ -52,7 +61,9 @@ if uploaded_file:
         if is_holiday:
             demand *= 1.5  # 节假日放大
 
-        h = hold_ratio * cost
+        # 气温越高，冷藏成本越高（25°C为冷藏临界点）
+        h = hold_ratio * cost * (1 + 0.02 * max(0, df.loc[t, 'Temperature'] - 25))
+
         p = shortage_multiplier * cost
 
         for inv in inventory_levels:
@@ -71,7 +82,7 @@ if uploaded_file:
             policy[t][inv] = best_q
 
     # 输出最优进货策略路径
-    st.subheader("📊 推荐进货策略")
+    st.subheader("📊 Recommended Ordering Policy")
     inventory = initial_inventory
     plan = []
     for t in range(T):
