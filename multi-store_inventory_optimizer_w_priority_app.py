@@ -26,22 +26,23 @@ store_df['Size_Factor'] = store_df['Size'] / store_df['Size'].mean()
 
 # ========== 3. 需求生成 ========== #
 np.random.seed(42)
-T = len(df)
+T = df['Date'].nunique()
 S = len(store_df)
-base_demand = np.random.uniform(80, 120, (S, T))
-demand_matrix = []
-for i, row in store_df.iterrows():
-    demand = base_demand[i] * row['Size_Factor']
-    demand *= (df['CPI'] / df['CPI'].mean()).values
-    demand *= (1 + 0.03 * (df['Temperature'] - 20)).values
-    demand = np.where(df['IsHoliday'], demand * 1.5, demand)
-    demand_matrix.append(demand)
-demand_matrix = np.array(demand_matrix)
+demand_matrix = np.zeros((S, T))
+
+for i, store_id in enumerate(store_df['Store']):
+    df_store = df[df['Store'] == store_id].reset_index(drop=True)
+    base_demand = np.random.uniform(80, 120, T)
+    demand = base_demand * store_df.loc[i, 'Size_Factor']
+    demand *= (df_store['CPI'] / df_store['CPI'].mean()).values
+    demand *= (1 + 0.03 * (df_store['Temperature'] - 20)).values
+    demand = np.where(df_store['IsHoliday'], demand * 1.5, demand)
+    demand_matrix[i] = demand
 
 # ========== 4. 配送成本矩阵 ========== #
 fuel_price = df['Fuel_Price'].mean()
 distance_matrix = store_df['Distance_km'].values.reshape(-1, 1)
-transport_cost_matrix = 0.05 * distance_matrix * fuel_price  # 元/件
+transport_cost_matrix = 0.05 * distance_matrix * fuel_price
 
 # ========== 5. 参数设置 ========== #
 st.sidebar.header("Global Parameters")
@@ -62,15 +63,13 @@ priority_weights = {'A': 3, 'B': 2, 'C': 1}
 store_df['Priority'] = store_df['Type'].map(priority_weights)
 
 for t in range(T):
-    # ====== 仓库补货决策 ======
     future_demand = demand_matrix[:, t:].sum(axis=1).sum() / (T - t)
     reorder_qty = max_order if warehouse_inventory < future_demand / 4 else 0
     warehouse_orders.append(reorder_qty)
     warehouse_inventory += reorder_qty
 
-    # ====== 本期成本参数 ======
     unit_cost = 6.5
-    temp = df.loc[t, 'Temperature']
+    temp = df[df['Store'] == 1].iloc[t]['Temperature']
     hold_cost = hold_ratio * unit_cost * (1 + 0.02 * max(0, temp - 25))
     shortage_cost = shortage_multiplier * unit_cost
     demands = demand_matrix[:, t]
@@ -78,8 +77,7 @@ for t in range(T):
     supply_limit = np.minimum(np.maximum(0, max_inv - store_inventory), demands)
     supply_limit = np.minimum(supply_limit, warehouse_inventory)
 
-    # 优先级惩罚项加入成本：优先级越高，惩罚越低
-    priority_cost = (store_df['Priority'].max() - store_df['Priority'].values) * 1.0  # 每优先级差1增加1元成本
+    priority_cost = (store_df['Priority'].max() - store_df['Priority'].values) * 1.0
     c = hold_cost * np.ones(S) + transport_cost_matrix.flatten() + priority_cost
 
     A_eq = [np.ones(S)]
@@ -89,14 +87,14 @@ for t in range(T):
     res = linprog(c, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
     allocation = res.x if res.success else np.zeros(S)
 
-    # 更新库存
     warehouse_inventory -= allocation.sum()
     store_inventory += allocation - demands
     store_inventory = np.maximum(store_inventory, 0)
 
+    date_str = df[df['Store'] == 1].iloc[t]['Date'].strftime("%Y-%m-%d")
     for i, store_id in enumerate(store_df['Store']):
         store_plan.append({
-            "Date": df.loc[t, 'Date'].strftime("%Y-%m-%d"),
+            "Date": date_str,
             "Store": store_id,
             "Demand": round(demands[i], 1),
             "Allocated": round(allocation[i], 1),
@@ -107,7 +105,7 @@ for t in range(T):
         })
 
     warehouse_plan.append({
-        "Date": df.loc[t, 'Date'].strftime("%Y-%m-%d"),
+        "Date": date_str,
         "Warehouse_Inventory": warehouse_inventory,
         "Order_Qty": reorder_qty
     })
@@ -125,3 +123,7 @@ st.dataframe(result_df)
 st.subheader("📈 Per-Store Allocation Over Time")
 pivot_chart = result_df.pivot(index="Date", columns="Store", values="Allocated")
 st.line_chart(pivot_chart)
+
+st.subheader("💰 Per-Store Holding Cost Over Time")
+pivot_hold = result_df.pivot(index="Date", columns="Store", values="Hold_Cost")
+st.line_chart(pivot_hold)
