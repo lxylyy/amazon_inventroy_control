@@ -9,6 +9,24 @@ st.title("📦 电商库存动态规划模型（支持节假日 & 成本调节�
 uploaded_file = st.file_uploader("上传包含 Demand、Unit_Cost、IsHoliday 的 CSV 数据", type="csv")
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
+
+    # 校验基础列是否存在
+    required_cols = {'Date', 'Fuel_Price', 'CPI', 'IsHoliday'}
+    if not required_cols.issubset(df.columns):
+        st.error(f"❌ 上传文件缺少必要列：{required_cols - set(df.columns)}")
+        st.stop()
+
+    # 模拟 Demand：基础随机 × CPI × 节假日放大
+    np.random.seed(42)
+    base_demand = np.random.uniform(80, 120, len(df))
+    df['Demand'] = base_demand * (df['CPI'] / df['CPI'].mean())
+    df['Demand'] = df['Demand'].where(~df['IsHoliday'], df['Demand'] * 1.5)  # 节假日加倍
+
+    # 模拟 Unit_Cost：与 CPI 和油价相关联
+    df['Unit_Cost'] = 6.5 + 0.02 * (df['CPI'] - df['CPI'].mean()) + 0.2 * (df['Fuel_Price'] - df['Fuel_Price'].mean())
+
+    # 保留关键列
+    df = df[['Date', 'Demand', 'Unit_Cost', 'IsHoliday']]
     df['Date'] = pd.to_datetime(df['Date'])
 
     # 参数设置
