@@ -107,7 +107,4 @@ if uploaded_files and len(uploaded_files) == 2:
 
     # 成本趋势图
     st.subheader("📈 Order Quantity per Period Visualization")
-    # 所有的 Date 加 15 年
-    result_df["Date"] = pd.to_datetime(result_df["Date"]) + pd.DateOffset(years=15)
-    result_df["Date"] = result_df["Date"].dt.strftime("%Y-%m-%d")
     st.bar_chart(result_df.set_index("Date")["Order_Q"])
