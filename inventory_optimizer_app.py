@@ -91,7 +91,7 @@ if uploaded_files and len(uploaded_files) == 2:
         q = policy[t][int(round(inventory / 10) * 10)]
         demand = df.loc[t, 'Demand']
         plan.append({
-            "Date": df.iloc[t, 'Date'].strftime("%Y-%m-%d"),
+            "Date": df.iloc[t]['Date'].strftime("%Y-%m-%d"),
             "Inventory_Begin": inventory,
             "Order_Q": q,
             "Demand": round(demand, 1),
