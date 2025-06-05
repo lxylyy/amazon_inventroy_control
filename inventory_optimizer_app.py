@@ -12,11 +12,14 @@ if uploaded_files and len(uploaded_files) == 2:
     uploaded_file2 = uploaded_files[1]
 
     df = pd.read_csv(uploaded_file)
-    df[df['Store'] == 1]  # 仅使用 Store 1 的数据
+    df = df[df['Store'] == 1]  # 仅使用 Store 1 的数据
 
     store_df = pd.read_csv(uploaded_file2)
     store_df['Size_Factor'] = store_df['Size'] / store_df['Size'].mean()
-    df['Size_Factor'] = store_df[store_df['Store'] == 1]['Size_Factor'].values[0]  # 假设 Store 1 的 Size_Factor
+    store_df = store_df[store_df['Store'] == 1]  # 仅使用 Store 1 的数据
+
+    # merge two dataframes on 'Store' column
+    df = df.merge(store_df[['Store', 'Type', 'Size', 'Distance_km', 'Size_Factor']], on='Store', how='left')
 
     # 模拟 Demand：气温敏感商品（如冰饮料）
     np.random.seed(42)
@@ -44,8 +47,8 @@ if uploaded_files and len(uploaded_files) == 2:
     hold_ratio = 0.2
     shortage_multiplier = 4
     st.sidebar.header("Model Parameter Settings")
-    initial_inventory = st.sidebar.number_input("Initial Inventory Level I₀", min_value=0, max_value=1000, value=50)
-    max_order = st.sidebar.number_input("Max order quantity per period Qₜ", min_value=10, max_value=1000, value=100)
+    initial_inventory = st.sidebar.number_input("Initial Inventory Level I₀ (0-1000)", min_value=0, max_value=1000, value=50)
+    max_order = st.sidebar.number_input("Max order quantity per period Qₜ (10-1000)", min_value=10, max_value=1000, value=100)
 
     # 初始化 DP
     T = len(df)
@@ -91,7 +94,7 @@ if uploaded_files and len(uploaded_files) == 2:
         q = policy[t][int(round(inventory / 10) * 10)]
         demand = df.loc[t, 'Demand']
         plan.append({
-            "Date": df.loc[t, 'Date'].strftime("%Y-%m-%d"),
+            "Date": (df.loc[t, 'Date'] + pd.DateOffset(years=15)).strftime("%Y-%m-%d"),
             "Inventory_Begin": inventory,
             "Order_Q": q,
             "Demand": round(demand, 1),
@@ -104,4 +107,7 @@ if uploaded_files and len(uploaded_files) == 2:
 
     # 成本趋势图
     st.subheader("📈 Order Quantity per Period Visualization")
+    # 所有的 Date 加 15 年
+    result_df["Date"] = pd.to_datetime(result_df["Date"]) + pd.DateOffset(years=15)
+    result_df["Date"] = result_df["Date"].dt.strftime("%Y-%m-%d")
     st.bar_chart(result_df.set_index("Date")["Order_Q"])
