@@ -6,20 +6,22 @@ st.set_page_config(page_title="Inventory Optimization Dynamic Programming", layo
 st.title("📦 Walmart Inventory Dynamic Programming Model (Supports Holidays & Cost Adjustment)")
 
 # 上传数据
-uploaded_file = st.file_uploader("Upload CSV data containing Demand, Unit_Cost, IsHoliday", type="csv")
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+uploaded_files = st.file_uploader("Upload two CSV files (features.csv, stores.csv)", accept_multiple_files=True)
+if uploaded_files and len(uploaded_files) == 2:
+    uploaded_file = uploaded_files[0]
+    uploaded_file2 = uploaded_files[1]
 
-    # 校验基础列是否存在
-    required_cols = {'Date', 'Fuel_Price', 'CPI', 'IsHoliday', 'Temperature'}
-    if not required_cols.issubset(df.columns):
-        st.error(f"❌ Uploaded file is missing required columns: {required_cols - set(df.columns)}")
-        st.stop()
+    df = pd.read_csv(uploaded_file)
+    df[df['Store'] == 1]  # 仅使用 Store 1 的数据
+
+    store_df = pd.read_csv(uploaded_file2)
+    store_df['Size_Factor'] = store_df['Size'] / store_df['Size'].mean()
+    df['Size_Factor'] = df['Store'].map(store_df.set_index('Store')['Size_Factor'])
 
     # 模拟 Demand：气温敏感商品（如冰饮料）
     np.random.seed(42)
     base_demand = np.random.uniform(80, 120, len(df))
-    df['Demand'] = base_demand * (df['CPI'] / df['CPI'].mean())
+    df['Demand'] = base_demand * df['Size_Factor'] * (df['CPI'] / df['CPI'].mean())
 
     # 节假日 ×1.5 放大
     df['Demand'] = df['Demand'].where(~df['IsHoliday'], df['Demand'] * 1.5)
@@ -34,8 +36,8 @@ if uploaded_file:
 
 
     # 保留关键列
-    df = df[['Date', 'Demand', 'Unit_Cost', 'IsHoliday', 'Temperature']]
-    df['Date'] = pd.to_datetime(df['Date'])
+    # df = df[['Date', 'Demand', 'Unit_Cost', 'IsHoliday', 'Temperature']]
+    # df['Date'] = pd.to_datetime(df['Date'])
 
 
     # 参数设置
