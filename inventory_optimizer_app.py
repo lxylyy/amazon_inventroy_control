@@ -16,7 +16,7 @@ if uploaded_files and len(uploaded_files) == 2:
 
     store_df = pd.read_csv(uploaded_file2)
     store_df['Size_Factor'] = store_df['Size'] / store_df['Size'].mean()
-    df['Size_Factor'] = df['Store'].map(store_df.set_index('Store')['Size_Factor'])
+    df['Size_Factor'] = store_df[store_df['Store'] == 1]['Size_Factor'].values[0]  # 假设 Store 1 的 Size_Factor
 
     # 模拟 Demand：气温敏感商品（如冰饮料）
     np.random.seed(42)
