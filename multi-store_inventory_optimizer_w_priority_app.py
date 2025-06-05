@@ -11,7 +11,7 @@ features_file = st.file_uploader("Upload Walmart features.csv (with Date, Fuel_P
 if not features_file:
     st.stop()
 df = pd.read_csv(features_file)
-df = df[df['store_id'].isin(range(1, 6))]  # 仅使用 Store 1 的数据
+df = df[df['Store'].isin(range(1, 6))]  # 仅使用 Store 1-5 的数据
 df['Date'] = pd.to_datetime(df['Date'])
 
 # ========== 2. 门店信息 & 距离（真实模拟）========== #
