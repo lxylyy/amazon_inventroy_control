@@ -2,18 +2,18 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-st.set_page_config(page_title="库存优化动态规划", layout="wide")
-st.title("📦 电商库存动态规划模型（支持节假日 & 成本调节）")
+st.set_page_config(page_title="Inventory Optimization Dynamic Programming", layout="wide")
+st.title("📦 Walmart Inventory Dynamic Programming Model (Supports Holidays & Cost Adjustment)")
 
 # 上传数据
-uploaded_file = st.file_uploader("上传包含 Demand、Unit_Cost、IsHoliday 的 CSV 数据", type="csv")
+uploaded_file = st.file_uploader("Upload CSV data containing Demand, Unit_Cost, IsHoliday", type="csv")
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
     # 校验基础列是否存在
     required_cols = {'Date', 'Fuel_Price', 'CPI', 'IsHoliday'}
     if not required_cols.issubset(df.columns):
-        st.error(f"❌ 上传文件缺少必要列：{required_cols - set(df.columns)}")
+        st.error(f"❌ Uploaded file is missing required columns: {required_cols - set(df.columns)}")
         st.stop()
 
     # 模拟 Demand：基础随机 × CPI × 节假日放大
@@ -30,15 +30,15 @@ if uploaded_file:
     df['Date'] = pd.to_datetime(df['Date'])
 
     # 参数设置
-    st.sidebar.header("模型参数设置")
-    hold_ratio = st.sidebar.slider("持有成本系数（h = 比例 × 采购成本）", 0.05, 0.5, 0.1)
-    shortage_multiplier = st.sidebar.slider("缺货成本倍数（p = 倍数 × 采购成本）", 1.0, 5.0, 2.0)
-    initial_inventory = st.sidebar.number_input("初始库存量 I₀", min_value=0, max_value=1000, value=50)
-    max_order = st.sidebar.number_input("单周期最大补货量 Qₜ", min_value=10, max_value=1000, value=100)
+    st.sidebar.header("Model Parameter Settings")
+    hold_ratio = st.sidebar.slider("Holding cost ratio (h = ratio × purchase cost)", 0.05, 0.5, 0.1)
+    shortage_multiplier = st.sidebar.slider("Shortage cost multiplier (p = multiplier × purchase cost)", 1.0, 5.0, 2.0)
+    initial_inventory = st.sidebar.number_input("Initial Inventory Level I₀", min_value=0, max_value=1000, value=50)
+    max_order = st.sidebar.number_input("Max order quantity per period Qₜ", min_value=10, max_value=1000, value=100)
 
     # 初始化 DP
     T = len(df)
-    inventory_levels = range(0, 200, 10)
+    inventory_levels = range(0, 210, 10)
     dp = {}
     policy = {}
     
@@ -90,5 +90,5 @@ if uploaded_file:
     st.dataframe(result_df)
 
     # 成本趋势图
-    st.subheader("📈 每周期进货量可视化")
+    st.subheader("📈 Order Quantity per Period Visualization")
     st.bar_chart(result_df.set_index("Date")["Order_Q"])
