@@ -108,3 +108,10 @@ if uploaded_files and len(uploaded_files) == 2:
     # 成本趋势图
     st.subheader("📈 Order Quantity per Period Visualization")
     st.bar_chart(result_df.set_index("Date")["Order_Q"])
+
+    # 计算total cost并显示
+    total_cost = sum(df['Unit_Cost'] * result_df['Order_Q']) + \
+                 sum(hold_ratio * df['Unit_Cost'] * result_df['Inventory_End']) + \
+                 sum(shortage_multiplier * df['Unit_Cost'] * np.maximum(0, df['Demand'] - result_df['Inventory_End']))
+
+    st.metric(label="Total Cost", value=f"${total_cost:,.2f}")
