@@ -55,6 +55,7 @@ if uploaded_files and len(uploaded_files) == 2:
     inventory_levels = range(0, 210, 10)
     dp = {}
     policy = {}
+    cost_sum = 0
     
     # 倒推法动态规划
     for t in reversed(range(T)):
@@ -85,6 +86,7 @@ if uploaded_files and len(uploaded_files) == 2:
                     best_q = q
             dp[t][inv] = min_cost
             policy[t][inv] = best_q
+            cost_sum += total_cost
 
     # 输出最优进货策略路径
     st.subheader("📊 Recommended Ordering Policy")
@@ -110,8 +112,4 @@ if uploaded_files and len(uploaded_files) == 2:
     st.bar_chart(result_df.set_index("Date")["Order_Q"])
 
     # 计算total cost并显示
-    total_cost = sum(df['Unit_Cost'] * result_df['Order_Q']) + \
-                 sum(hold_ratio * df['Unit_Cost'] * result_df['Inventory_End']) + \
-                 sum(shortage_multiplier * df['Unit_Cost'] * np.maximum(0, df['Demand'] - result_df['Inventory_End']))
-
-    st.metric(label="Total Cost", value=f"${total_cost:,.2f}")
+    st.metric(label="Total Cost", value=f"${cost_sum:,.2f}")
