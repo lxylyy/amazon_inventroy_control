@@ -52,7 +52,7 @@ if uploaded_files and len(uploaded_files) == 2:
 
     # 初始化 DP
     T = len(df)
-    inventory_levels = range(0, 210, 10)
+    inventory_levels = range(0, int(max_order * T + initial_inventory + 100), 10)
     dp = {}
     policy = {}
     cost_sum = {}
