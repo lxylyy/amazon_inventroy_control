@@ -55,7 +55,7 @@ if uploaded_files and len(uploaded_files) == 2:
     inventory_levels = range(0, 210, 10)
     dp = {}
     policy = {}
-    cost_sum = 0
+    cost_sum = {}
     
     # 倒推法动态规划
     for t in reversed(range(T)):
@@ -86,15 +86,18 @@ if uploaded_files and len(uploaded_files) == 2:
                     best_q = q
             dp[t][inv] = min_cost
             policy[t][inv] = best_q
-            cost_sum += total_cost
+            cost_sum[t][inv] = min_cost
 
     # 输出最优进货策略路径
+    total_cost_sum = 0
+
     st.subheader("📊 Recommended Ordering Policy")
     inventory = initial_inventory
     plan = []
     for t in range(T):
         q = policy[t][int(round(inventory / 10) * 10)]
         demand = df.loc[t, 'Demand']
+        total_cost_sum += dp[t][int(round(inventory / 10) * 10)]
         plan.append({
             "Date": (df.loc[t, 'Date'] + pd.DateOffset(years=15)).strftime("%Y-%m-%d"),
             "Inventory_Begin": inventory,
@@ -112,4 +115,4 @@ if uploaded_files and len(uploaded_files) == 2:
     st.bar_chart(result_df.set_index("Date")["Order_Q"])
 
     # 计算total cost并显示
-    st.metric(label="Total Cost", value=f"${cost_sum:,.2f}")
+    st.metric(label="Total Cost", value=f"${total_cost_sum:,.2f}")
