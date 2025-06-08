@@ -52,7 +52,7 @@ if uploaded_files and len(uploaded_files) == 2:
 
     # 初始化 DP
     T = len(df)
-    inventory_levels = range(0, 210, 10)
+    inventory_levels = range(0, 1210, 10)
     dp = {}
     policy = {}
     
