@@ -47,8 +47,8 @@ if uploaded_files and len(uploaded_files) == 2:
     hold_ratio = 0.2
     shortage_multiplier = 4
     st.sidebar.header("Model Parameter Settings")
-    initial_inventory = st.sidebar.number_input("Initial Inventory Level I₀ (0-200)", min_value=0, max_value=200, value=50)
-    max_order = st.sidebar.number_input("Max order quantity per period Qₜ (10-600)", min_value=10, max_value=600, value=100)
+    initial_inventory = st.sidebar.number_input("Initial Inventory Level I₀ (0-2000)", min_value=0, max_value=2000, value=1070)
+    max_order = st.sidebar.number_input("Max order quantity per period Qₜ (10-2000)", min_value=10, max_value=2000, value=800)
 
     # 初始化 DP
     T = len(df)
